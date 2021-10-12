@@ -216,7 +216,4 @@ def diffImage():
 if __name__ == '__main__':
     from waitress import serve
 
-    print('League Dashboard booted...')
-    print('Open http://127.0.0.1:5000/ in your browser.')
-
     serve(app, host="0.0.0.0", port=5000)
