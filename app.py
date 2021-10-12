@@ -77,11 +77,6 @@ def sortMostGold(summonerList):
     return sorted_summoners
 
 
-def resetData():
-    global goldDiffData
-    global gameTimeData
-    goldDiffData = [0]
-    gameTimeData = [0]
 
 
 def getTeamGoldDiffImage():
@@ -165,6 +160,8 @@ def getData(summoners):
 @app.route('/')
 def index():
     global data
+    global goldDiffData
+    global gameTimeData
     try:
         game_json = requests.get(url='https://127.0.0.1:2999/liveclientdata/allgamedata', verify=False).json()
         summoners = sortPositions(getSummonerList(game_json))
@@ -178,13 +175,12 @@ def index():
             gameTimeData.append(game_time)
         return render_template('main.html', dashboardData=data[0], teamData=data[1], goldData=data[2])
     except requests.exceptions.ConnectionError:
-        if len(goldDiffData) > 1:
+        if data is not None:
             return render_template('main.html', dashboardData=data[0], teamData=data[1], goldData=data[2])
-        else:
-            resetData()
         return render_template('error.html')
     except KeyError:
-        resetData()
+        goldDiffData = [0]
+        gameTimeData = [0]
         return render_template('loading.html')
 
 
