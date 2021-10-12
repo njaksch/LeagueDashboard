@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="5">
+    <title>League Dashboard</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="shortcut icon" href="static/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+</head>
+<body>
+<div id="dashboard">
+    <h2>Dashboard</h2>
+    <table>
+        {% for row in dashboardData %}
+            <tr>
+                <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
+                         alt="{{ row['position'] }}"/></td>
+                <td><img class="img_champion" src="static/images/champions/{{ row['nameOrder'] }}.png"
+                         alt="{{ row['nameOrder'] }}"/></td>
+                <td class="gold">{{ row['goldOrder'] }}</td>
+                <td class="gold">{{ row['goldDiff'] }}</td>
+                <td class="gold">{{ row['goldChaos'] }}</td>
+                <td><img class="img_champion" src="static/images/champions/{{ row['nameChaos'] }}.png"
+                         alt="{{ row['nameChaos'] }}"/></td>
+                <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
+                         alt="{{ row['position'] }}"/></td>
+            </tr>
+        {% endfor %}
+        <tr>
+            <td style="background-color:blue"></td>
+            <td style="background-color:blue"></td>
+            <td class="gold">{{ teamData['order'] }}</td>
+            <td class="gold">{{ teamData['diff'] }}</td>
+            <td class="gold">{{ teamData['chaos'] }}</td>
+            <td style="background-color:red"></td>
+            <td style="background-color:red"></td>
+        </tr>
+    </table>
+    <img id="goldDiff" src="{{ url_for('diffImage') }}" alt="Gold Difference">
+</div>
+<div id="mostgold">
+    <h2>Most Gold</h2>
+    <table>
+        {% for row in goldData %}
+            <tr>
+                <td class="rank" style="background-color:{{ row['color'] }}">{{ row['rank'] }}</td>
+                <td><img class="img_champion" src="static/images/champions/{{ row['name'] }}.png"
+                         alt="{{ row['name'] }}"/></td>
+                <td>{{ row['gold'] }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</div>
+</body>
+</html>

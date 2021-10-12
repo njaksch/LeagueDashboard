@@ -1,0 +1,36 @@
+body {
+    background-color: #1e1e1e;
+}
+
+p, td, h2 {
+    color: #cecece;
+}
+
+div {
+    float: left;
+}
+
+.img_champion, .img_position {
+    width: 40px;
+    height: 40px;
+}
+
+.gold {
+    width: 60px;
+    text-align: center;
+}
+
+.rank {
+    width: 20px;
+    text-align: center;
+}
+
+
+#dashboard {
+    margin-right: -15px;
+}
+
+#goldDiff {
+    width: 80%;
+    height: 80%;
+}
