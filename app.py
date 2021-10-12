@@ -10,13 +10,13 @@ logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s 
 app = Flask(__name__)
 requests.packages.urllib3.disable_warnings()
 
-data = None
-goldDiffData = [0]
-gameTimeData = [0.0]
+last_data = None
+list_diff: list[int] = [0]
+list_time: list[float] = [0.0]
 
 
 class Summoner:
-    def __init__(self, champion, team, position, item_gold=0, summoner_name=''):
+    def __init__(self, champion: str, team: str, position: str, item_gold=0, summoner_name=''):
         self.champion = champion
         self.team = team
         self.position = position
@@ -24,8 +24,8 @@ class Summoner:
         self.summoner_name = summoner_name
 
 
-def getSummonerList(game_json):
-    summoners = []
+def getSummonerList(game_json) -> list[Summoner]:
+    summoners: list[Summoner] = []
     patch: str = requests.get(url='https://ddragon.leagueoflegends.com/api/versions.json', verify=False).json()[0]
     item_json = requests.get(url='http://ddragon.leagueoflegends.com/cdn/' + patch + '/data/en_US/item.json',
                              verify=False).json()
@@ -45,38 +45,36 @@ def getSummonerList(game_json):
     return summoners
 
 
-def sortPositions(summonerList):
-    sorted_summoners = []
+def sortPositions(summoners):
+    summoners_sorted = []
     teams = ['ORDER', 'CHAOS']
     positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
     for teamID in range(len(teams)):
         for positionID in range(len(positions)):
-            for summonerID in range(len(summonerList)):
-                summoner = summonerList[summonerID]
+            for summonerID in range(len(summoners)):
+                summoner = summoners[summonerID]
                 team = teams[teamID]
                 position = positions[positionID]
                 if summoner.team == team and summoner.position == position:
-                    sorted_summoners.append(summoner)
+                    summoners_sorted.append(summoner)
                     break
-    return sorted_summoners
+    return summoners_sorted
 
 
-def sortMostGold(summonerList):
-    sorted_summoners = []
-    while len(summonerList) > 0:
-        max_gold = summonerList[0].item_gold
-        max_summoner = summonerList[0]
-        for i in range(1, len(summonerList)):
-            summoner = summonerList[i]
-            if summoner not in sorted_summoners:
+def sortMostGold(summoners):
+    summoners_sorted = []
+    while len(summoners) > 0:
+        max_gold = summoners[0].item_gold
+        max_summoner = summoners[0]
+        for i in range(1, len(summoners)):
+            summoner = summoners[i]
+            if summoner not in summoners_sorted:
                 if summoner.item_gold > max_gold:
                     max_gold = summoner.item_gold
                     max_summoner = summoner
-        sorted_summoners.append(max_summoner)
-        summonerList.remove(max_summoner)
-    return sorted_summoners
-
-
+        summoners_sorted.append(max_summoner)
+        summoners.remove(max_summoner)
+    return summoners_sorted
 
 
 def getTeamGoldDiffImage():
@@ -92,16 +90,16 @@ def getTeamGoldDiffImage():
     axes.spines['left'].set_color('#CECECE')
     axes.tick_params(axis='x', colors='#CECECE')
     axes.tick_params(axis='y', colors='#CECECE')
-    plt.plot(gameTimeData, goldDiffData, color='r', linewidth=2.5, linestyle='-')
+    plt.plot(list_time, list_diff, color='r', linewidth=2.5, linestyle='-')
     plt.plot([0, 120], [0, 0], color='k', linewidth=1, linestyle='-')
-    if max(gameTimeData) == 0:
+    if max(list_time) == 0:
         plt.xlim(0, 1)
     else:
-        plt.xlim(0, max(gameTimeData))
-    if max(gameTimeData) == 0:
+        plt.xlim(0, max(list_time))
+    if max(list_time) == 0:
         plt.ylim(-100, 100)
     else:
-        plt.ylim(min(goldDiffData), max(goldDiffData))
+        plt.ylim(min(list_diff), max(list_diff))
     plt.xlabel('Minute')
     plt.ylabel('Gold Difference')
     img = BytesIO()
@@ -159,28 +157,28 @@ def getData(summoners):
 
 @app.route('/')
 def index():
-    global data
-    global goldDiffData
-    global gameTimeData
+    global last_data
+    global list_diff
+    global list_time
     try:
         game_json = requests.get(url='https://127.0.0.1:2999/liveclientdata/allgamedata', verify=False).json()
         summoners = sortPositions(getSummonerList(game_json))
         if len(summoners) == 0:
             summoners = getSummonerList(game_json)
-        data = getData(summoners)
+        last_data = getData(summoners)
         game_time = game_json['gameData']['gameTime'] / 60
-        team_gold_diff = int((data[1]['diff'].replace(',', '')))
-        if goldDiffData[-1] != team_gold_diff:
-            goldDiffData.append(team_gold_diff)
-            gameTimeData.append(game_time)
-        return render_template('main.html', dashboardData=data[0], teamData=data[1], goldData=data[2])
+        team_gold_diff = int((last_data[1]['diff'].replace(',', '')))
+        if list_diff[-1] != team_gold_diff:
+            list_diff.append(team_gold_diff)
+            list_time.append(game_time)
+        return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1], goldData=last_data[2])
     except requests.exceptions.ConnectionError:
-        if data is not None:
-            return render_template('main.html', dashboardData=data[0], teamData=data[1], goldData=data[2])
+        if last_data is not None:
+            return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1], goldData=last_data[2])
         return render_template('error.html')
     except KeyError:
-        goldDiffData = [0]
-        gameTimeData = [0]
+        list_diff = [0]
+        list_time = [0]
         return render_template('loading.html')
 
 
