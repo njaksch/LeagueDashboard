@@ -1,4 +1,3 @@
-import json
 import logging
 from io import BytesIO
 
@@ -26,7 +25,9 @@ class Summoner:
 
 def getSummonerList(game_json):
     summoners = []
-    item_json = loadItemJson()
+    patch: str = requests.get(url='https://ddragon.leagueoflegends.com/api/versions.json', verify=False).json()[0]
+    item_json = requests.get(url='http://ddragon.leagueoflegends.com/cdn/' + patch + '/data/en_US/item.json',
+                             verify=False).json()
     for playerID in range(len(game_json['allPlayers'])):
         player_json = game_json['allPlayers'][playerID]
         gold = 0
@@ -75,22 +76,6 @@ def sortMostGold(summonerList):
     return sorted_summoners
 
 
-def loadTemplateGameJson():
-    file = open('allgamedata.json')
-    game_json = json.load(file)
-    return game_json
-
-
-def loadItemJson():
-    file = open('item.json')
-    item_json = json.load(file)
-    return item_json
-
-
-def getGameTime(game_json):
-    return game_json['gameData']['gameTime'] / 60
-
-
 def resetData():
     global goldDiffData
     global gameTimeData
@@ -98,8 +83,8 @@ def resetData():
     gameTimeData = [0]
 
 
-def updateTeamGoldData(game_json: str, teamGoldDiff: int):
-    game_time = getGameTime(game_json)
+def updateTeamGoldData(game_json: [int, slice], teamGoldDiff: int):
+    game_time = game_json['gameData']['gameTime'] / 60
     if len(goldDiffData) == 0:
         logging.error('goldDiffData\'s length is 0')
         return False
@@ -201,6 +186,7 @@ def index():
         updateTeamGoldData(game_json, int((db[1]['diff'].replace(',', ''))))
         return render_template('main.html', dashboardData=db[0], teamData=db[1], goldData=db[2])
     except requests.exceptions.ConnectionError:
+
         resetData()
         return render_template('error.html')
     except KeyError:
@@ -210,7 +196,7 @@ def index():
 
 @app.route('/teamGoldDiff.png')
 def diffImage():
-    return send_file(getTeamGoldDiffImage(), mimetype='image/png', cache_timeout=5)
+    return send_file(getTeamGoldDiffImage(), mimetype='image/png', cache_timeout=1)
 
 
 if __name__ == '__main__':
