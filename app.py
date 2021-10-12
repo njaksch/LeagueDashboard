@@ -5,6 +5,18 @@ import matplotlib.pyplot as plt
 import requests
 from flask import Flask, render_template, send_file
 
+PORT = 5000
+
+COLOR_FONT = '#CECECE'
+COLOR_BACKGROUND = '#1E1E1E'
+
+URL_LIVEGAME: str = 'https://127.0.0.1:2999/liveclientdata/allgamedata'
+URL_VERSION: str = 'https://ddragon.leagueoflegends.com/api/versions.json'
+URL_ITEMS: str = 'https://ddragon.leagueoflegends.com/cdn/{}/data/en_US/item.json'
+
+TEAMS = ['ORDER', 'CHAOS']
+POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+
 logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s %(levelname)s: %(message)s')
 
 app = Flask(__name__)
@@ -26,9 +38,8 @@ class Summoner:
 
 def getSummonerList(game_json) -> list[Summoner]:
     summoners: list[Summoner] = []
-    patch: str = requests.get(url='https://ddragon.leagueoflegends.com/api/versions.json', verify=False).json()[0]
-    item_json = requests.get(url='http://ddragon.leagueoflegends.com/cdn/' + patch + '/data/en_US/item.json',
-                             verify=False).json()
+    patch: str = requests.get(url=URL_VERSION, verify=False).json()[0]
+    item_json = requests.get(url=URL_ITEMS.format(patch), verify=False).json()
     for playerID in range(len(game_json['allPlayers'])):
         player_json = game_json['allPlayers'][playerID]
         gold = 0
@@ -47,14 +58,12 @@ def getSummonerList(game_json) -> list[Summoner]:
 
 def sortPositions(summoners):
     summoners_sorted = []
-    teams = ['ORDER', 'CHAOS']
-    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
-    for teamID in range(len(teams)):
-        for positionID in range(len(positions)):
+    for teamID in range(len(TEAMS)):
+        for positionID in range(len(POSITIONS)):
             for summonerID in range(len(summoners)):
                 summoner = summoners[summonerID]
-                team = teams[teamID]
-                position = positions[positionID]
+                team = TEAMS[teamID]
+                position = POSITIONS[positionID]
                 if summoner.team == team and summoner.position == position:
                     summoners_sorted.append(summoner)
                     break
@@ -79,17 +88,17 @@ def sortMostGold(summoners):
 
 def getTeamGoldDiffImage():
     plt.clf()
-    plt.figure(facecolor='#1E1E1E')
+    plt.figure(facecolor=COLOR_BACKGROUND)
     axes = plt.axes()
-    axes.set_facecolor('#1E1E1E')
-    axes.xaxis.label.set_color('#CECECE')
-    axes.yaxis.label.set_color('#CECECE')
-    axes.spines['bottom'].set_color('#CECECE')
-    axes.spines['top'].set_color('#CECECE')
-    axes.spines['right'].set_color('#CECECE')
-    axes.spines['left'].set_color('#CECECE')
-    axes.tick_params(axis='x', colors='#CECECE')
-    axes.tick_params(axis='y', colors='#CECECE')
+    axes.set_facecolor(COLOR_BACKGROUND)
+    axes.xaxis.label.set_color(COLOR_FONT)
+    axes.yaxis.label.set_color(COLOR_FONT)
+    axes.spines['bottom'].set_color(COLOR_FONT)
+    axes.spines['top'].set_color(COLOR_FONT)
+    axes.spines['right'].set_color(COLOR_FONT)
+    axes.spines['left'].set_color(COLOR_FONT)
+    axes.tick_params(axis='x', colors=COLOR_FONT)
+    axes.tick_params(axis='y', colors=COLOR_FONT)
     plt.plot(list_time, list_diff, color='r', linewidth=2.5, linestyle='-')
     plt.plot([0, 120], [0, 0], color='k', linewidth=1, linestyle='-')
     if max(list_time) == 0:
@@ -138,7 +147,7 @@ def getData(summoners):
     for i in range(len(summoners)):
         if summoners[i].summoner_name == 'waayne':
             color = 'yellow'
-        elif summoners[i].team == 'ORDER':
+        elif summoners[i].team == TEAMS[0]:
             color = 'blue'
         else:
             color = 'red'
@@ -161,7 +170,7 @@ def index():
     global list_diff
     global list_time
     try:
-        game_json = requests.get(url='https://127.0.0.1:2999/liveclientdata/allgamedata', verify=False).json()
+        game_json = requests.get(url=URL_LIVEGAME, verify=False).json()
         summoners = sortPositions(getSummonerList(game_json))
         if len(summoners) == 0:
             summoners = getSummonerList(game_json)
@@ -174,7 +183,8 @@ def index():
         return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1], goldData=last_data[2])
     except requests.exceptions.ConnectionError:
         if last_data is not None:
-            return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1], goldData=last_data[2])
+            return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1],
+                                   goldData=last_data[2])
         return render_template('error.html')
     except KeyError:
         list_diff = [0]
@@ -191,6 +201,6 @@ if __name__ == '__main__':
     from waitress import serve
 
     print('League Dashboard booted...')
-    print('Open http://127.0.0.1:5000/ in your browser.')
+    print(f'Open http://127.0.0.1:{PORT}/ in your browser.')
 
-    serve(app, host="0.0.0.0", port=5000)
+    serve(app, host="0.0.0.0", port=PORT)
