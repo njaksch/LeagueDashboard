@@ -10,6 +10,7 @@ logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s 
 app = Flask(__name__)
 requests.packages.urllib3.disable_warnings()
 
+data = None
 goldDiffData = [0]
 gameTimeData = [0.0]
 
@@ -81,20 +82,6 @@ def resetData():
     global gameTimeData
     goldDiffData = [0]
     gameTimeData = [0]
-
-
-def updateTeamGoldData(game_json: [int, slice], teamGoldDiff: int):
-    game_time = game_json['gameData']['gameTime'] / 60
-    if len(goldDiffData) == 0:
-        logging.error('goldDiffData\'s length is 0')
-        return False
-    else:
-        if goldDiffData[-1] != teamGoldDiff:
-            goldDiffData.append(teamGoldDiff)
-            gameTimeData.append(game_time)
-            return True
-        else:
-            return False
 
 
 def getTeamGoldDiffImage():
@@ -177,17 +164,24 @@ def getData(summoners):
 
 @app.route('/')
 def index():
+    global data
     try:
         game_json = requests.get(url='https://127.0.0.1:2999/liveclientdata/allgamedata', verify=False).json()
         summoners = sortPositions(getSummonerList(game_json))
         if len(summoners) == 0:
             summoners = getSummonerList(game_json)
-        db = getData(summoners)
-        updateTeamGoldData(game_json, int((db[1]['diff'].replace(',', ''))))
-        return render_template('main.html', dashboardData=db[0], teamData=db[1], goldData=db[2])
+        data = getData(summoners)
+        game_time = game_json['gameData']['gameTime'] / 60
+        team_gold_diff = int((data[1]['diff'].replace(',', '')))
+        if goldDiffData[-1] != team_gold_diff:
+            goldDiffData.append(team_gold_diff)
+            gameTimeData.append(game_time)
+        return render_template('main.html', dashboardData=data[0], teamData=data[1], goldData=data[2])
     except requests.exceptions.ConnectionError:
-
-        resetData()
+        if len(goldDiffData) > 1:
+            return render_template('main.html', dashboardData=data[0], teamData=data[1], goldData=data[2])
+        else:
+            resetData()
         return render_template('error.html')
     except KeyError:
         resetData()
