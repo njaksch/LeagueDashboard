@@ -1,1 +1,1 @@
-start C:\Users\niclas\AppData\Local\Programs\Python\Python39\python.exe C:\Users\niclas\Documents\Projekte\PyCharm\LeagueDashboard\app.py
+start python app.py
