@@ -6,7 +6,7 @@ This is a dashboard for League of Legends.
 It will show you helpful statistics for your running game.
 And everything's in dark mode, of course.
 
-![Screenshot of dashboard](images/screenshot_dashboard.png)
+![Screenshot of dashboard](static/screenshot_dashboard.png)
 
 ## How is the gold difference calculated?
 The dashboard will update the gold values of your team instantly.
