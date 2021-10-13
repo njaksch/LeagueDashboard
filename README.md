@@ -23,6 +23,10 @@ The tool will provide you the url.
 But why no overlay? There are already some tools which provide similar functionality as overlay, but they all crash. At least in my case. As most people own a second monitor / another device (smartphone) I decided to put it in the browser.
 
 ## Usage
+### Running the release
+Just run the exe you have downloaded from releses.
+
+### Running from source project
 On Windows:
 > Run LeagueDashboard.bat
 
