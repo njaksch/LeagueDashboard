@@ -6,7 +6,6 @@ import requests
 from flask import Flask, render_template, send_file
 
 PORT = 5000
-
 COLOR_FONT = '#CECECE'
 COLOR_BACKGROUND = '#1E1E1E'
 
@@ -88,7 +87,7 @@ def sortMostGold(summoners):
 
 def getTeamGoldDiffImage():
     plt.clf()
-    plt.figure(facecolor=COLOR_BACKGROUND)
+    fig = plt.figure(facecolor=COLOR_BACKGROUND)
     axes = plt.axes()
     axes.set_facecolor(COLOR_BACKGROUND)
     axes.xaxis.label.set_color(COLOR_FONT)
@@ -114,6 +113,7 @@ def getTeamGoldDiffImage():
     img = BytesIO()
     plt.savefig(img)
     img.seek(0)
+    plt.close(fig)
     return img
 
 
@@ -194,7 +194,7 @@ def index():
 
 @app.route('/teamGoldDiff.png')
 def diffImage():
-    return send_file(getTeamGoldDiffImage(), mimetype='image/png', cache_timeout=1)
+    return send_file(getTeamGoldDiffImage(), mimetype='image/png')
 
 
 if __name__ == '__main__':
