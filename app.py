@@ -77,12 +77,12 @@ def getSummonerList(game_json) -> list[Summoner]:
     return summoners
 
 
-def sortPositions(summoners):
-    summoners_sorted = []
+def sortPositions(summoners) -> list[Summoner]:
+    summoners_sorted: list[Summoner] = []
     for teamID in range(len(TEAMS)):
         for positionID in range(len(POSITIONS)):
             for summonerID in range(len(summoners)):
-                summoner = summoners[summonerID]
+                summoner: Summoner = summoners[summonerID]
                 team = TEAMS[teamID]
                 position = POSITIONS[positionID]
                 if summoner.team == team and summoner.position == position:
@@ -91,13 +91,13 @@ def sortPositions(summoners):
     return summoners_sorted
 
 
-def sortMostGold(summoners):
-    summoners_sorted = []
+def sortMostGold(summoners) -> list[Summoner]:
+    summoners_sorted: list[Summoner] = []
     while len(summoners) > 0:
-        max_gold = summoners[0].item_gold
-        max_summoner = summoners[0]
+        max_gold: int = summoners[0].item_gold
+        max_summoner: Summoner = summoners[0]
         for i in range(1, len(summoners)):
-            summoner = summoners[i]
+            summoner: Summoner = summoners[i]
             if summoner not in summoners_sorted:
                 if summoner.item_gold > max_gold:
                     max_gold = summoner.item_gold
@@ -107,7 +107,7 @@ def sortMostGold(summoners):
     return summoners_sorted
 
 
-def getTeamGoldDiffImage():
+def getTeamGoldDiffImage() -> BytesIO:
     plt.clf()
     fig = plt.figure(facecolor=COLOR_BACKGROUND)
     axes = plt.axes()
