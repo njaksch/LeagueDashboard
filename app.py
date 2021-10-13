@@ -50,6 +50,12 @@ class Summoner:
 
 
 def getSummonerList(game_json) -> list[Summoner]:
+    def formatChampionName(name: str) -> str:
+        formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
+        if SPECIAL_NAMES.__contains__(formatted):
+            return SPECIAL_NAMES[formatted]
+        return formatted
+
     summoners: list[Summoner] = []
     item_json = requests.get(url=URL_ITEMS.format(current_patch), verify=False).json()
     for playerID in range(len(game_json['allPlayers'])):
@@ -69,13 +75,6 @@ def getSummonerList(game_json) -> list[Summoner]:
                 summoner_name=player_json['summonerName'])
             summoners.append(summoner)
     return summoners
-
-
-def formatChampionName(name: str) -> str:
-    formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
-    if SPECIAL_NAMES.__contains__(formatted):
-        return SPECIAL_NAMES[formatted]
-    return formatted
 
 
 def sortPositions(summoners):
