@@ -1,4 +1,5 @@
 import logging
+import socket
 from io import BytesIO
 
 import matplotlib
@@ -7,6 +8,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import requests
 from flask import Flask, render_template, send_file
+from waitress import serve
 
 PORT = 5000
 COLOR_FONT = '#CECECE'
@@ -19,6 +21,12 @@ URL_SPLASH: str = 'https://ddragon.leagueoflegends.com/cdn/{}/img/champion/{}.pn
 
 TEAMS = ['ORDER', 'CHAOS']
 POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+SPECIAL_NAMES = {
+    'ChoGath': 'Chogath',
+    'KaiSa': 'Kaisa',
+    'KhaZix': 'Khazix',
+    'Wukong': 'MonkeyKing'
+}
 
 logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -26,6 +34,7 @@ app = Flask(__name__)
 # noinspection PyUnresolvedReferences
 requests.packages.urllib3.disable_warnings()
 
+current_patch: str = requests.get(url=URL_VERSION, verify=False).json()[0]
 last_data = None
 list_diff: list[int] = [0]
 list_time: list[float] = [0.0]
@@ -53,13 +62,20 @@ def getSummonerList(game_json) -> list[Summoner]:
             summoners[playerID].item_gold = gold
         except IndexError:
             summoner = Summoner(
-                champion=player_json['championName'].replace(' ', '').replace('.', '').replace('\'', ''),
+                champion=formatChampionName(player_json['championName']),
                 team=player_json['team'],
                 position=player_json['position'],
                 item_gold=gold,
                 summoner_name=player_json['summonerName'])
             summoners.append(summoner)
     return summoners
+
+
+def formatChampionName(name: str) -> str:
+    formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
+    if SPECIAL_NAMES.__contains__(formatted):
+        return SPECIAL_NAMES[formatted]
+    return formatted
 
 
 def sortPositions(summoners):
@@ -207,11 +223,12 @@ def diffImage():
 
 
 if __name__ == '__main__':
-    from waitress import serve
-
-    current_patch: str = requests.get(url=URL_VERSION, verify=False).json()[0]
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    local_ip = s.getsockname()[0]
+    s.close()
 
     print('League Dashboard booted...')
-    print(f'Open http://127.0.0.1:{PORT}/ in your browser.')
+    print(f'Open https://{local_ip}:{PORT}/ in your browser.')
 
     serve(app, host="0.0.0.0", port=PORT)
