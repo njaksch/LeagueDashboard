@@ -1,6 +1,9 @@
 import logging
 from io import BytesIO
 
+import matplotlib
+
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import requests
 from flask import Flask, render_template, send_file
@@ -12,6 +15,7 @@ COLOR_BACKGROUND = '#1E1E1E'
 URL_LIVEGAME: str = 'https://127.0.0.1:2999/liveclientdata/allgamedata'
 URL_VERSION: str = 'https://ddragon.leagueoflegends.com/api/versions.json'
 URL_ITEMS: str = 'https://ddragon.leagueoflegends.com/cdn/{}/data/en_US/item.json'
+URL_SPLASH: str = 'https://ddragon.leagueoflegends.com/cdn/{}/img/champion/{}.png'
 
 TEAMS = ['ORDER', 'CHAOS']
 POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
@@ -19,6 +23,7 @@ POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s %(levelname)s: %(message)s')
 
 app = Flask(__name__)
+# noinspection PyUnresolvedReferences
 requests.packages.urllib3.disable_warnings()
 
 last_data = None
@@ -37,8 +42,7 @@ class Summoner:
 
 def getSummonerList(game_json) -> list[Summoner]:
     summoners: list[Summoner] = []
-    patch: str = requests.get(url=URL_VERSION, verify=False).json()[0]
-    item_json = requests.get(url=URL_ITEMS.format(patch), verify=False).json()
+    item_json = requests.get(url=URL_ITEMS.format(current_patch), verify=False).json()
     for playerID in range(len(game_json['allPlayers'])):
         player_json = game_json['allPlayers'][playerID]
         gold = 0
@@ -48,9 +52,12 @@ def getSummonerList(game_json) -> list[Summoner]:
         try:
             summoners[playerID].item_gold = gold
         except IndexError:
-            summoner = Summoner(champion=player_json['championName'].lower().replace(' ', '_'),
-                                team=player_json['team'], position=player_json['position'], item_gold=gold,
-                                summoner_name=player_json['summonerName'])
+            summoner = Summoner(
+                champion=player_json['championName'].replace(' ', '').replace('.', '').replace('\'', ''),
+                team=player_json['team'],
+                position=player_json['position'],
+                item_gold=gold,
+                summoner_name=player_json['summonerName'])
             summoners.append(summoner)
     return summoners
 
@@ -124,9 +131,11 @@ def getData(summoners):
     team_size = int(len(summoners) / 2)
     for i in range(team_size):
         row = {
-            'position': summoners[i].position.lower(),
-            'nameOrder': summoners[i].champion.lower().replace(' ', '_'),
-            'nameChaos': summoners[i + team_size].champion.lower().replace(' ', '_'),
+            'position': summoners[i].position,
+            'nameOrder': summoners[i].champion,
+            'splashOrder': URL_SPLASH.format(current_patch, summoners[i].champion),
+            'nameChaos': summoners[i + team_size].champion,
+            'splashChaos': URL_SPLASH.format(current_patch, summoners[i + team_size].champion),
             'goldOrder': '{:,}'.format(summoners[i].item_gold),
             'goldChaos': '{:,}'.format(summoners[i + team_size].item_gold),
             'goldDiff': '{:,}'.format(summoners[i].item_gold - summoners[i + team_size].item_gold)
@@ -154,7 +163,8 @@ def getData(summoners):
         row = {
             'color': color,
             'rank': i + 1,
-            'name': summoners[i].champion.lower().replace(' ', '_'),
+            'champion': summoners[i].champion,
+            'splash': URL_SPLASH.format(current_patch, summoners[i].champion),
             'gold': '{:,}'.format(summoners[i].item_gold)
         }
         gold_data.append(row)
@@ -171,10 +181,9 @@ def index():
     global list_time
     try:
         game_json = requests.get(url=URL_LIVEGAME, verify=False).json()
-        summoners = sortPositions(getSummonerList(game_json))
-        if len(summoners) == 0:
-            summoners = getSummonerList(game_json)
-        last_data = getData(summoners)
+        summoners = getSummonerList(game_json)
+        summoners_pos_sorted = sortPositions(summoners)
+        last_data = getData(summoners if len(summoners_pos_sorted) == 0 else summoners_pos_sorted)
         game_time = game_json['gameData']['gameTime'] / 60
         team_gold_diff = int((last_data[1]['diff'].replace(',', '')))
         if list_diff[-1] != team_gold_diff:
@@ -199,6 +208,8 @@ def diffImage():
 
 if __name__ == '__main__':
     from waitress import serve
+
+    current_patch: str = requests.get(url=URL_VERSION, verify=False).json()[0]
 
     print('League Dashboard booted...')
     print(f'Open http://127.0.0.1:{PORT}/ in your browser.')

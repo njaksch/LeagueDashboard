@@ -17,12 +17,12 @@
             <tr>
                 <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
                          alt="{{ row['position'] }}"/></td>
-                <td><img class="img_champion" src="static/images/champions/{{ row['nameOrder'] }}.png"
+                <td><img class="img_champion" src="{{ row['splashOrder'] }}"
                          alt="{{ row['nameOrder'] }}"/></td>
                 <td class="gold">{{ row['goldOrder'] }}</td>
                 <td class="gold">{{ row['goldDiff'] }}</td>
                 <td class="gold">{{ row['goldChaos'] }}</td>
-                <td><img class="img_champion" src="static/images/champions/{{ row['nameChaos'] }}.png"
+                <td><img class="img_champion" src="{{ row['splashChaos'] }}"
                          alt="{{ row['nameChaos'] }}"/></td>
                 <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
                          alt="{{ row['position'] }}"/></td>
@@ -46,8 +46,8 @@
         {% for row in goldData %}
             <tr>
                 <td class="rank" style="background-color:{{ row['color'] }}">{{ row['rank'] }}</td>
-                <td><img class="img_champion" src="static/images/champions/{{ row['name'] }}.png"
-                         alt="{{ row['name'] }}"/></td>
+                <td><img class="img_champion" src="{{ row['splash'] }}"
+                         alt="{{ row['champion'] }}"/></td>
                 <td>{{ row['gold'] }}</td>
             </tr>
         {% endfor %}
