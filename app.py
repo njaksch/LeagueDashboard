@@ -170,6 +170,7 @@ def getData(summoners):
     gold_data = []
     summoners = sortMostGold(summoners)
     for i in range(len(summoners)):
+        # TODO: detect summoner instead of hardcoded line
         if summoners[i].summoner_name == 'waayne':
             color = 'yellow'
         elif summoners[i].team == TEAMS[0]:
