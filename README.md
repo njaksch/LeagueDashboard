@@ -1,4 +1,4 @@
-#League Dashboard
+# League Dashboard
 
 Greetings summoner!
 
