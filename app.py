@@ -3,12 +3,12 @@ import socket
 from io import BytesIO
 
 import matplotlib
-
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import requests
 from flask import Flask, render_template, send_file
 from waitress import serve
+
+matplotlib.use('Agg')
 
 PORT = 5000
 COLOR_FONT = '#CECECE'
@@ -22,9 +22,6 @@ URL_SPLASH: str = 'https://ddragon.leagueoflegends.com/cdn/{}/img/champion/{}.pn
 TEAMS = ['ORDER', 'CHAOS']
 POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 SPECIAL_NAMES = {
-    'ChoGath': 'Chogath',
-    'KaiSa': 'Kaisa',
-    'KhaZix': 'Khazix',
     'Wukong': 'MonkeyKing'
 }
 
@@ -44,14 +41,19 @@ class Summoner:
     def __init__(self, champion: str, team: str, position: str, item_gold=0, summoner_name=''):
         self.champion = champion
         self.team = team
-        self.position = position
+        self.position = position.lower()
         self.item_gold = item_gold
         self.summoner_name = summoner_name
 
 
 def getSummonerList(game_json) -> list[Summoner]:
     def formatChampionName(name: str) -> str:
-        formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
+        try:
+            spos = name.index('\'')
+            formatted = name[0:spos] + name[spos + 1].lower() + name[spos + 2:]
+        except ValueError:
+            formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
+
         if SPECIAL_NAMES.__contains__(formatted):
             return SPECIAL_NAMES[formatted]
         return formatted
@@ -224,9 +226,13 @@ def diffImage():
 
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
+    errorcode = s.connect_ex(("8.8.8.8", 80))
     local_ip = s.getsockname()[0]
     s.close()
+
+    if errorcode != 0:
+        print('Could not start webserver')
+        exit(1)
 
     print('League Dashboard booted...')
     print(f'Open https://{local_ip}:{PORT}/ in your browser.')
