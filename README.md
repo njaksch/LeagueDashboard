@@ -8,11 +8,6 @@ And everything's in dark mode, of course.
 
 ![Screenshot of dashboard](static/screenshot_dashboard.png)
 
-## How is the gold difference calculated?
-The dashboard will update the gold values of your team instantly.
-Your enemies gold will only be updated when they are seen on the map.
-Therefore, there is a 2,5k gold difference between teams on each start (well, until you saw all enemy champions).
-
 ## How it works
 This is no overlay.
 The dasboard will create a webserver.
@@ -36,3 +31,8 @@ On Linux:
 > python app.py
 
 Open up the shown link in your browser.
+
+## How is the gold difference calculated?
+The dashboard will update the gold values of your team instantly.
+Your enemies gold will only be updated when they are seen on the map.
+Therefore, there is a 2,5k gold difference between teams on each start (well, until you saw all enemy champions).
