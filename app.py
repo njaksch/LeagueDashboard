@@ -22,6 +22,8 @@ URL_SPLASH: str = 'https://ddragon.leagueoflegends.com/cdn/{}/img/champion/{}.pn
 TEAMS = ['ORDER', 'CHAOS']
 POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 SPECIAL_NAMES = {
+    'Kogmaw': 'KogMaw',
+    'Nunu&Willump': 'Nunu',
     'Wukong': 'MonkeyKing'
 }
 
