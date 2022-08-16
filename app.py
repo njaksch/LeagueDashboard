@@ -24,7 +24,8 @@ POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 SPECIAL_NAMES = {
     'Kogmaw': 'KogMaw',
     'Nunu&Willump': 'Nunu',
-    'Wukong': 'MonkeyKing'
+    'Wukong': 'MonkeyKing',
+    'RenataGlasc': 'Renata'
 }
 
 logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s %(levelname)s: %(message)s')
