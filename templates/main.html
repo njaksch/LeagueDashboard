@@ -17,6 +17,7 @@
             <tr>
                 <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
                          alt="{{ row['position'] }}"/></td>
+                <td class="rank">{{ row['rankOrder'] }}</td>
                 <td><img class="img_champion" src="{{ row['splashOrder'] }}"
                          alt="{{ row['nameOrder'] }}"/></td>
                 <td class="gold">{{ row['goldOrder'] }}</td>
@@ -24,6 +25,7 @@
                 <td class="gold">{{ row['goldChaos'] }}</td>
                 <td><img class="img_champion" src="{{ row['splashChaos'] }}"
                          alt="{{ row['nameChaos'] }}"/></td>
+                <td class="rank">{{ row['rankChaos'] }}</td>
                 <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
                          alt="{{ row['position'] }}"/></td>
             </tr>
@@ -31,27 +33,18 @@
         <tr>
             <td style="background-color:blue"></td>
             <td style="background-color:blue"></td>
+            <td style="background-color:blue"></td>
             <td class="gold">{{ teamData['order'] }}</td>
             <td class="gold">{{ teamData['diff'] }}</td>
             <td class="gold">{{ teamData['chaos'] }}</td>
             <td style="background-color:red"></td>
             <td style="background-color:red"></td>
+            <td style="background-color:red"></td>
         </tr>
     </table>
-    <img id="goldDiff" src="{{ url_for('diffImage') }}" alt="Gold Difference">
 </div>
 <div id="mostgold">
-    <h2>Most Gold</h2>
-    <table>
-        {% for row in goldData %}
-            <tr>
-                <td class="rank" style="background-color:{{ row['color'] }}">{{ row['rank'] }}</td>
-                <td><img class="img_champion" src="{{ row['splash'] }}"
-                         alt="{{ row['champion'] }}"/></td>
-                <td>{{ row['gold'] }}</td>
-            </tr>
-        {% endfor %}
-    </table>
+    <img id="goldDiff" src="{{ url_for('diffImage') }}" alt="Gold Difference">
 </div>
 </body>
 </html>

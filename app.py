@@ -29,7 +29,7 @@ SPECIAL_NAMES = {
     'Reksai': 'RekSai'
 }
 
-logging.basicConfig(filename='app.log', level=logging.WARN, format='%(asctime)s %(levelname)s: %(message)s')
+logging.basicConfig(filename='/tmp/loldb.log', level=logging.WARN, format='%(asctime)s %(levelname)s: %(message)s')
 
 app = Flask(__name__)
 # noinspection PyUnresolvedReferences
@@ -42,12 +42,13 @@ list_time: list[float] = [0.0]
 
 
 class Summoner:
-    def __init__(self, championname: str, team: str, position: str, item_gold=0, summoner_name=''):
-        self.championName = championname
-        self.team = team
-        self.position = position.lower()
-        self.item_gold = item_gold
-        self.summoner_name = summoner_name
+    def __init__(self, championname: str, team: str, position: str, rank=0, item_gold=0, summoner_name=''):
+        self.championName: str = championname
+        self.team: str = team
+        self.position: str = position.lower()
+        self.item_gold: int = item_gold
+        self.summoner_name: str = summoner_name
+        self.rank: int = rank
 
     @staticmethod
     def getList(game_json) -> list:
@@ -67,6 +68,7 @@ class Summoner:
         summoners: list[Summoner] = []
         item_json = requests.get(url=URL_ITEMS.format(current_patch), verify=False).json()
 
+        goldlist = []
         for playerID in range(len(game_json['allPlayers'])):
             player_json = game_json['allPlayers'][playerID]
             gold = 0
@@ -74,6 +76,8 @@ class Summoner:
             for slot in player_json['items']:
                 item_id = str(slot['itemID'])
                 gold += item_json['data'][item_id]['gold']['total']
+
+            goldlist.append(gold)
 
             try:
                 summoners[playerID].item_gold = gold
@@ -86,6 +90,10 @@ class Summoner:
                     item_gold=gold,
                     summoner_name=player_json['summonerName'])
                 summoners.append(summoner)
+
+        goldlist.sort(reverse=True)
+        for i in range(len(summoners)):
+            summoners[i].rank = goldlist.index(summoners[i].item_gold) + 1
 
         return summoners
 
@@ -142,8 +150,10 @@ class Dashboard:
             row = {
                 'position': summoners[i].position,
                 'nameOrder': summoners[i].championName,
+                'rankOrder': summoners[i].rank,
                 'splashOrder': URL_SPLASH.format(current_patch, summoners[i].championName),
                 'nameChaos': summoners[i + team_size].championName,
+                'rankChaos': summoners[i + team_size].rank,
                 'splashChaos': URL_SPLASH.format(current_patch, summoners[i + team_size].championName),
                 'goldOrder': '{:,}'.format(summoners[i].item_gold),
                 'goldChaos': '{:,}'.format(summoners[i + team_size].item_gold),
@@ -204,7 +214,7 @@ def getTeamGoldDiffImage() -> BytesIO:
     axes.spines['left'].set_color(COLOR_FONT)
     axes.tick_params(axis='x', colors=COLOR_FONT)
     axes.tick_params(axis='y', colors=COLOR_FONT)
-    plt.plot(list_time, list_diff, color='r', linewidth=2.5, linestyle='-')
+    plt.plot(list_time, list_diff, color='y', linewidth=2.5, linestyle='-')
     plt.plot([0, 120], [0, 0], color='k', linewidth=1, linestyle='-')
 
     if max(list_time) == 0:
