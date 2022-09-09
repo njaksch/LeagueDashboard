@@ -1,15 +1,19 @@
+import json as j
 import logging
+import os
 import socket
+import sys
 from io import BytesIO
 
 import matplotlib
 import matplotlib.pyplot as plt
-import requests
+import requests as r
 from flask import Flask, render_template, send_file
 from waitress import serve
 
 matplotlib.use('Agg')
 
+TESTENV = False
 PORT = 5000
 COLOR_FONT = '#CECECE'
 COLOR_BACKGROUND = '#1E1E1E'
@@ -33,9 +37,9 @@ logging.basicConfig(filename='/tmp/loldb.log', level=logging.WARN, format='%(asc
 
 app = Flask(__name__)
 # noinspection PyUnresolvedReferences
-requests.packages.urllib3.disable_warnings()
+r.packages.urllib3.disable_warnings()
 
-current_patch: str = requests.get(url=URL_VERSION, verify=False).json()[0]
+current_patch: str = r.get(url=URL_VERSION, verify=False).json()[0]
 last_data = None
 list_diff: list[int] = [0]
 list_time: list[float] = [0.0]
@@ -66,7 +70,7 @@ class Summoner:
             return formatted
 
         summoners: list[Summoner] = []
-        item_json = requests.get(url=URL_ITEMS.format(current_patch), verify=False).json()
+        item_json = r.get(url=URL_ITEMS.format(current_patch), verify=False).json()
 
         goldlist = []
         for playerID in range(len(game_json['allPlayers'])):
@@ -91,6 +95,7 @@ class Summoner:
                     summoner_name=player_json['summonerName'])
                 summoners.append(summoner)
 
+        # apply summoner ranks sorted by item gold descending
         goldlist.sort(reverse=True)
         for i in range(len(summoners)):
             summoners[i].rank = goldlist.index(summoners[i].item_gold) + 1
@@ -215,7 +220,19 @@ def getTeamGoldDiffImage() -> BytesIO:
     axes.tick_params(axis='x', colors=COLOR_FONT)
     axes.tick_params(axis='y', colors=COLOR_FONT)
     plt.plot(list_time, list_diff, color='y', linewidth=2.5, linestyle='-')
-    plt.plot([0, 120], [0, 0], color='k', linewidth=1, linestyle='-')
+
+    for y in range(-10000, 10000, 1000):
+        if y < 0:
+            color = 'r'
+            linewidth = 0.5
+        elif y > 0:
+            color = 'b'
+            linewidth = 0.5
+        else:
+            color = 'k'
+            linewidth = 1
+
+        plt.plot([0, 120], [y, y], color=color, linewidth=linewidth, linestyle='-')
 
     if max(list_time) == 0:
         plt.xlim(0, 1)
@@ -244,7 +261,11 @@ def index():
     global list_time
 
     try:
-        game_json = requests.get(url=URL_LIVEGAME, verify=False).json()
+        if TESTENV:
+            directory = os.path.abspath(os.path.dirname(sys.argv[0]))
+            game_json = j.load(open(directory + '/allgamedata.json', 'r'))
+        else:
+            game_json = r.get(url=URL_LIVEGAME, verify=False).json()
         summoners = Summoner.getList(game_json)
         summoners_pos_sorted = Summoner.sortPositions(summoners)
         last_data = Dashboard.getData(summoners if len(summoners_pos_sorted) == 0 else summoners_pos_sorted)
@@ -257,7 +278,7 @@ def index():
 
         return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1], goldData=last_data[2])
 
-    except requests.exceptions.ConnectionError:
+    except r.exceptions.ConnectionError:
         if last_data is not None:
             return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1],
                                    goldData=last_data[2])
