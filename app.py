@@ -39,171 +39,159 @@ app = Flask(__name__)
 # noinspection PyUnresolvedReferences
 r.packages.urllib3.disable_warnings()
 
-current_patch: str = r.get(url=URL_VERSION, verify=False).json()[0]
-last_data = None
-list_diff: list[int] = [0]
-list_time: list[float] = [0.0]
+
+def formatChampionName(name: str) -> str:
+    try:
+        spos = name.index('\'')
+        formatted = name[0:spos] + name[spos + 1].lower() + name[spos + 2:]
+
+    except ValueError:
+        formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
+
+    if SPECIAL_NAMES.__contains__(formatted):
+        return SPECIAL_NAMES[formatted]
+
+    return formatted
 
 
-class Summoner:
-    def __init__(self, championname: str, team: str, position: str, rank=0, item_gold=0, summoner_name=''):
-        self.championName: str = championname
-        self.team: str = team
-        self.position: str = position.lower()
-        self.item_gold: int = item_gold
-        self.summoner_name: str = summoner_name
-        self.rank: int = rank
+class Package:
+    def __init__(self, json) -> None:
+        self.json = json
+        self.summoners = self.getList()
+        sortedbypos = self.sortByPosition()
 
-    @staticmethod
-    def getList(game_json) -> list:
-        def formatChampionName(name: str) -> str:
-            try:
-                spos = name.index('\'')
-                formatted = name[0:spos] + name[spos + 1].lower() + name[spos + 2:]
+        if len(sortedbypos) > 0:
+            self.summoners = sortedbypos
 
-            except ValueError:
-                formatted = name.replace(' ', '').replace('.', '').replace('\'', '')
+        data = self.getData()
+        self.dashboard = data[0]
+        self.teamGold = data[1]
+        self.gameMode = json['gameData']['gameMode']
+        self.gameTime = float(json['gameData']['gameTime']) / 60
 
-            if SPECIAL_NAMES.__contains__(formatted):
-                return SPECIAL_NAMES[formatted]
-
-            return formatted
-
+    def getList(self) -> list:
         summoners: list[Summoner] = []
-        item_json = r.get(url=URL_ITEMS.format(current_patch), verify=False).json()
+        itemJson = r.get(url=URL_ITEMS.format(current_patch), verify=False).json()
 
         goldlist = []
-        for playerID in range(len(game_json['allPlayers'])):
-            player_json = game_json['allPlayers'][playerID]
+        for playerID in range(len(self.json['allPlayers'])):
+            playerJson = self.json['allPlayers'][playerID]
             gold = 0
 
-            for slot in player_json['items']:
+            # add up equip gold
+            for slot in playerJson['items']:
                 item_id = str(slot['itemID'])
-                gold += item_json['data'][item_id]['gold']['total']
+                gold += itemJson['data'][item_id]['gold']['total']
 
             goldlist.append(gold)
 
             try:
-                summoners[playerID].item_gold = gold
+                summoners[playerID].itemGold = gold
 
             except IndexError:
                 summoner = Summoner(
-                    championname=formatChampionName(player_json['championName']),
-                    team=player_json['team'],
-                    position=player_json['position'],
-                    item_gold=gold,
-                    summoner_name=player_json['summonerName'])
+                    championname=formatChampionName(playerJson['championName']),
+                    team=playerJson['team'],
+                    position=playerJson['position'],
+                    itemGold=gold,
+                    summonerName=playerJson['summonerName'])
                 summoners.append(summoner)
 
         # apply summoner ranks sorted by item gold descending
         goldlist.sort(reverse=True)
         for i in range(len(summoners)):
-            summoners[i].rank = goldlist.index(summoners[i].item_gold) + 1
+            summoners[i].rank = goldlist.index(summoners[i].itemGold) + 1
 
         return summoners
 
-    @staticmethod
-    def sortPositions(summoners) -> list:
-        summoners_sorted: list[Summoner] = []
-
-        for teamID in range(len(TEAMS)):
-            for positionID in range(len(POSITIONS)):
-                for summonerID in range(len(summoners)):
-                    summoner: Summoner = summoners[summonerID]
-                    team = TEAMS[teamID]
-                    position = POSITIONS[positionID]
-
-                    if summoner.team == team and summoner.position == position:
-                        summoners_sorted.append(summoner)
-                        break
-
-        return summoners_sorted
-
-    @staticmethod
-    def sortMostGold(summoners) -> list:
-        summoners_sorted: list[Summoner] = []
-        while len(summoners) > 0:
-            max_gold: int = summoners[0].item_gold
-            max_summoner: Summoner = summoners[0]
-
-            for i in range(1, len(summoners)):
-                summoner: Summoner = summoners[i]
-
-                if summoner not in summoners_sorted:
-                    if summoner.item_gold > max_gold:
-                        max_gold = summoner.item_gold
-                        max_summoner = summoner
-
-            summoners_sorted.append(max_summoner)
-            summoners.remove(max_summoner)
-
-        return summoners_sorted
-
-
-class Dashboard:
-    def __init__(self, summoners: list[Summoner]):
-        self.summoners = summoners
-
-    @staticmethod
-    def getData(summoners):
+    def getData(self):
         data = []
-        dashboard_data = []
-        team_gold = [0, 0]
-        team_size = int(len(summoners) / 2)
+        dashboard = []
+        teamGold = [0, 0]
+        teamSize = int(len(self.summoners) / 2)
 
-        for i in range(team_size):
+        for i in range(teamSize):
             row = {
-                'position': summoners[i].position,
-                'nameOrder': summoners[i].championName,
-                'rankOrder': summoners[i].rank,
-                'splashOrder': URL_SPLASH.format(current_patch, summoners[i].championName),
-                'nameChaos': summoners[i + team_size].championName,
-                'rankChaos': summoners[i + team_size].rank,
-                'splashChaos': URL_SPLASH.format(current_patch, summoners[i + team_size].championName),
-                'goldOrder': '{:,}'.format(summoners[i].item_gold),
-                'goldChaos': '{:,}'.format(summoners[i + team_size].item_gold),
-                'goldDiff': '{:,}'.format(summoners[i].item_gold - summoners[i + team_size].item_gold)
+                'position': self.summoners[i].position,
+                'nameOrder': self.summoners[i].championName,
+                'rankOrder': self.summoners[i].rank,
+                'splashOrder': URL_SPLASH.format(current_patch, self.summoners[i].championName),
+                'nameChaos': self.summoners[i + teamSize].championName,
+                'rankChaos': self.summoners[i + teamSize].rank,
+                'splashChaos': URL_SPLASH.format(current_patch, self.summoners[i + teamSize].championName),
+                'goldOrder': '{:,}'.format(self.summoners[i].itemGold),
+                'goldChaos': '{:,}'.format(self.summoners[i + teamSize].itemGold),
+                'goldDiff': '{:,}'.format(self.summoners[i].itemGold - self.summoners[i + teamSize].itemGold)
             }
 
             if row['position'] == '':
                 row['position'] = 'empty'
 
-            team_gold[0] += summoners[i].item_gold
-            team_gold[1] += summoners[i + team_size].item_gold
-            dashboard_data.append(row)
+            teamGold[0] += self.summoners[i].itemGold
+            teamGold[1] += self.summoners[i + teamSize].itemGold
+            dashboard.append(row)
 
-        team_gold_diff = team_gold[0] - team_gold[1]
-        team_data = {
-            'order': '{:,}'.format(team_gold[0]),
-            'chaos': '{:,}'.format(team_gold[1]),
-            'diff': '{:,}'.format(team_gold_diff)
+        teamGoldDiff = teamGold[0] - teamGold[1]
+        teamData = {
+            'order': '{:,}'.format(teamGold[0]),
+            'chaos': '{:,}'.format(teamGold[1]),
+            'diff': '{:,}'.format(teamGoldDiff)
         }
 
-        gold_data = []
-        summoners = Summoner.sortMostGold(summoners)
-
-        for i in range(len(summoners)):
-            # TODO: detect summoner instead of hardcoded line
-            if summoners[i].summoner_name == 'waayne':
-                color = 'yellow'
-            elif summoners[i].team == TEAMS[0]:
-                color = 'blue'
-            else:
-                color = 'red'
-            row = {
-                'color': color,
-                'rank': i + 1,
-                'champion': summoners[i].championName,
-                'splash': URL_SPLASH.format(current_patch, summoners[i].championName),
-                'gold': '{:,}'.format(summoners[i].item_gold)
-            }
-            gold_data.append(row)
-
-        data.append(dashboard_data)
-        data.append(team_data)
-        data.append(gold_data)
+        data.append(dashboard)
+        data.append(teamData)
 
         return data
+
+    def sortByPosition(self) -> list:
+        summonersSorted: list[Summoner] = []
+
+        for teamID in range(len(TEAMS)):
+            for positionID in range(len(POSITIONS)):
+                for summonerID in range(len(self.summoners)):
+                    summoner: Summoner = self.summoners[summonerID]
+                    team = TEAMS[teamID]
+                    position = POSITIONS[positionID]
+
+                    if summoner.team == team and summoner.position == position:
+                        summonersSorted.append(summoner)
+                        break
+
+        return summonersSorted
+
+    def sortMostGold(self) -> list:
+        summonersSorted: list[Summoner] = []
+        while len(self.summoners) > 0:
+            maxGold: int = self.summoners[0].itemGold
+            maxSummoner: Summoner = self.summoners[0]
+
+            for i in range(1, len(self.summoners)):
+                summoner: Summoner = self.summoners[i]
+
+                if summoner not in summonersSorted:
+                    if summoner.itemGold > maxGold:
+                        maxGold = summoner.itemGold
+                        maxSummoner = summoner
+
+            summonersSorted.append(maxSummoner)
+            self.summoners.remove(maxSummoner)
+
+        return summonersSorted
+
+
+class Summoner:
+    def __init__(self, championname: str, team: str, position: str, rank=0, itemGold=0, summonerName=''):
+        self.championName: str = championname
+        self.team: str = team
+        self.position: str = position.lower()
+        self.itemGold: int = itemGold
+        self.summonerName: str = summonerName
+        self.rank: int = rank
+
+
+class Dashboard:
+    def __init__(self, summoners: list[Summoner]):
+        self.summoners = summoners
 
 
 def getTeamGoldDiffImage() -> BytesIO:
@@ -219,7 +207,7 @@ def getTeamGoldDiffImage() -> BytesIO:
     axes.spines['left'].set_color(COLOR_FONT)
     axes.tick_params(axis='x', colors=COLOR_FONT)
     axes.tick_params(axis='y', colors=COLOR_FONT)
-    plt.plot(list_time, list_diff, color='y', linewidth=2.5, linestyle='-')
+    plt.plot(lastTime, lastDiff, color='y', linewidth=2.5, linestyle='-')
 
     for y in range(-10000, 10000, 1000):
         if y < 0:
@@ -232,17 +220,18 @@ def getTeamGoldDiffImage() -> BytesIO:
             color = 'k'
             linewidth = 1
 
-        plt.plot([0, 120], [y, y], color=color, linewidth=linewidth, linestyle='-')
+        plt.plot([0, 120], [y, y], color=color,
+                 linewidth=linewidth, linestyle='-')
 
-    if max(list_time) == 0:
+    if max(lastTime) == 0:
         plt.xlim(0, 1)
     else:
-        plt.xlim(0, max(list_time))
+        plt.xlim(0, max(lastTime))
 
-    if max(list_time) == 0:
+    if max(lastTime) == 0:
         plt.ylim(-100, 100)
     else:
-        plt.ylim(min(list_diff), max(list_diff))
+        plt.ylim(min(lastDiff), max(lastDiff))
 
     plt.xlabel('Minute')
     plt.ylabel('Gold Difference')
@@ -254,39 +243,44 @@ def getTeamGoldDiffImage() -> BytesIO:
     return img
 
 
+current_patch: str = r.get(url=URL_VERSION, verify=False).json()[0]
+p = None
+lastDiff: list[int] = [0]
+lastTime: list[float] = [0.0]
+
+
 @app.route('/')
 def index():
-    global last_data
-    global list_diff
-    global list_time
+    global p
+    global lastDiff
+    global lastTime
 
     try:
         if TESTENV:
             directory = os.path.abspath(os.path.dirname(sys.argv[0]))
-            game_json = j.load(open(directory + '/allgamedata.json', 'r'))
+            #json = j.load(open(directory + '/allgamedata.json', 'r'))
+            json = j.load(open('allgamedata.json', 'r'))
         else:
-            game_json = r.get(url=URL_LIVEGAME, verify=False).json()
-        summoners = Summoner.getList(game_json)
-        summoners_pos_sorted = Summoner.sortPositions(summoners)
-        last_data = Dashboard.getData(summoners if len(summoners_pos_sorted) == 0 else summoners_pos_sorted)
-        game_time = game_json['gameData']['gameTime'] / 60
-        team_gold_diff = int((last_data[1]['diff'].replace(',', '')))
+            json = r.get(url=URL_LIVEGAME, verify=False).json()
 
-        if list_diff[-1] != team_gold_diff:
-            list_diff.append(team_gold_diff)
-            list_time.append(game_time)
+        p = Package(json)
 
-        return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1], goldData=last_data[2])
+        teamGoldDiff = int((p.teamGold['diff'].replace(',', '')))
+
+        if lastDiff[-1] != teamGoldDiff:
+            lastDiff.append(teamGoldDiff)
+            lastTime.append(p.gameTime)
+
+        return render_template('main.html', dashboardData=p.dashboard, teamData=p.teamGold)
 
     except r.exceptions.ConnectionError:
-        if last_data is not None:
-            return render_template('main.html', dashboardData=last_data[0], teamData=last_data[1],
-                                   goldData=last_data[2])
+        if p is not None:
+            return render_template('main.html', dashboardData=p.dashboard, teamData=p.teamGold)
         return render_template('error.html')
 
     except KeyError:
-        list_diff = [0]
-        list_time = [0]
+        lastDiff = [0]
+        lastTime = [0]
         return render_template('loading.html')
 
 
@@ -298,7 +292,7 @@ def diffImage():
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     errorcode = s.connect_ex(("8.8.8.8", 80))
-    local_ip = s.getsockname()[0]
+    localIp = s.getsockname()[0]
     s.close()
 
     if errorcode != 0:
@@ -306,6 +300,6 @@ if __name__ == '__main__':
         exit(1)
 
     print('League Dashboard booted...')
-    print(f'Open https://{local_ip}:{PORT}/ in your browser.')
+    print(f'Open https://{localIp}:{PORT}/ in your browser.')
 
     serve(app, host="0.0.0.0", port=PORT)
