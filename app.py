@@ -258,8 +258,7 @@ def index():
     try:
         if TESTENV:
             directory = os.path.abspath(os.path.dirname(sys.argv[0]))
-            #json = j.load(open(directory + '/allgamedata.json', 'r'))
-            json = j.load(open('allgamedata.json', 'r'))
+            json = j.load(open(directory + '/allgamedata.json', 'r'))
         else:
             json = r.get(url=URL_LIVEGAME, verify=False).json()
 
