@@ -207,7 +207,6 @@ def getTeamGoldDiffImage() -> BytesIO:
     axes.spines['left'].set_color(COLOR_FONT)
     axes.tick_params(axis='x', colors=COLOR_FONT)
     axes.tick_params(axis='y', colors=COLOR_FONT)
-    plt.plot(lastTime, lastDiff, color='y', linewidth=2.5, linestyle='-')
 
     for y in range(-10000, 10000, 1000):
         if y < 0:
@@ -220,8 +219,7 @@ def getTeamGoldDiffImage() -> BytesIO:
             color = 'k'
             linewidth = 1
 
-        plt.plot([0, 120], [y, y], color=color,
-                 linewidth=linewidth, linestyle='-')
+        plt.plot([0, 120], [y, y], color=color, linewidth=linewidth, linestyle='-')
 
     if max(lastTime) == 0:
         plt.xlim(0, 1)
@@ -233,6 +231,7 @@ def getTeamGoldDiffImage() -> BytesIO:
     else:
         plt.ylim(min(lastDiff), max(lastDiff))
 
+    plt.plot(lastTime, lastDiff, color='y', linewidth=2.5, linestyle='-')
     plt.xlabel('Minute')
     plt.ylabel('Gold Difference')
     img = BytesIO()
