@@ -15,7 +15,7 @@
     <table>
         {% for row in dashboardData %}
             <tr>
-                <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
+                <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.webp"
                          alt="{{ row['position'] }}"/></td>
                 <td class="rank">{{ row['rankOrder'] }}</td>
                 <td><img class="img_champion" src="{{ row['splashOrder'] }}"
@@ -26,7 +26,7 @@
                 <td><img class="img_champion" src="{{ row['splashChaos'] }}"
                          alt="{{ row['nameChaos'] }}"/></td>
                 <td class="rank">{{ row['rankChaos'] }}</td>
-                <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.png"
+                <td><img class="img_position" src="static/images/lanes/{{ row['position'] }}.webp"
                          alt="{{ row['position'] }}"/></td>
             </tr>
         {% endfor %}
