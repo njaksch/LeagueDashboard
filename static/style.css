@@ -25,11 +25,6 @@ div {
     text-align: center;
 }
 
-
-#dashboard {
-}
-
 #goldDiff {
-    width: 80%;
-    height: 80%;
+    width: 100%;
 }
