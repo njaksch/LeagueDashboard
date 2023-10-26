@@ -31,15 +31,15 @@
             </tr>
         {% endfor %}
         <tr>
-            <td style="background-color:blue"></td>
-            <td style="background-color:blue"></td>
-            <td style="background-color:blue"></td>
+            <td style="background-color:{{ teamColors['left'] }}"></td>
+            <td style="background-color:{{ teamColors['left'] }}"></td>
+            <td style="background-color:{{ teamColors['left'] }}"></td>
             <td class="gold">{{ teamData['order'] }}</td>
             <td class="gold">{{ teamData['diff'] }}</td>
             <td class="gold">{{ teamData['chaos'] }}</td>
-            <td style="background-color:red"></td>
-            <td style="background-color:red"></td>
-            <td style="background-color:red"></td>
+            <td style="background-color:{{ teamColors['right'] }}"></td>
+            <td style="background-color:{{ teamColors['right'] }}"></td>
+            <td style="background-color:{{ teamColors['right'] }}"></td>
         </tr>
     </table>
 </div>

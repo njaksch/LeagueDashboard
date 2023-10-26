@@ -11,31 +11,32 @@ import requests as r
 from flask import Flask, render_template, send_file
 from waitress import serve
 
-matplotlib.use("Agg")
+# Server
+HOST = "0.0.0.0"
 
-TESTENV = False
-PORT = 5000
-COLOR_FONT = "#CECECE"
-COLOR_BACKGROUND = "#1E1E1E"
-
+# URLs
 URL_LIVEGAME = "https://127.0.0.1:2999/liveclientdata/allgamedata"
 URL_VERSION = "https://ddragon.leagueoflegends.com/api/versions.json"
 URL_ITEMS = "https://ddragon.leagueoflegends.com/cdn/{}/data/en_US/item.json"
 URL_SPLASH = "https://ddragon.leagueoflegends.com/cdn/{}/img/champion/{}.png"
 URL_CHAMPIONS = "http://ddragon.leagueoflegends.com/cdn/{}/data/en_US/champion.json"
 
+# Constants
 TEAMS = ["ORDER", "CHAOS"]
 POSITIONS = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 
-logging.basicConfig(
-    filename="/tmp/loldb.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s",
-)
+# Config
+CONFIG = j.load(open("config.json", "r"))
+PORT = CONFIG["PORT"]
+COLOR_FONT = CONFIG["COLOR_FONT"]
+COLOR_BACKGROUND = CONFIG["COLOR_BACKGROUND"]
+
+invertTeamColors = False
+
 
 app = Flask(__name__)
-# noinspection PyUnresolvedReferences
 r.packages.urllib3.disable_warnings()
+matplotlib.use("Agg")
 
 
 def championNameToId(name: str) -> str:
@@ -75,6 +76,13 @@ class Package:
 
             goldlist.append(gold)
 
+            # check if swap is needed
+            global invertTeamColors
+            invertTeamColors = (
+                self.json["activePlayer"]["summonerName"] == playerJson["summonerName"]
+                and playerJson["team"] == "CHAOS"
+            )
+
             try:
                 summoners[playerID].itemGold = gold
 
@@ -102,24 +110,46 @@ class Package:
         teamSize = int(len(self.summoners) / 2)
 
         for i in range(teamSize):
-            row = {
-                "position": self.summoners[i].position,
-                "nameOrder": self.summoners[i].championName,
-                "rankOrder": self.summoners[i].rank,
-                "splashOrder": URL_SPLASH.format(
-                    version, self.summoners[i].championName
-                ),
-                "nameChaos": self.summoners[i + teamSize].championName,
-                "rankChaos": self.summoners[i + teamSize].rank,
-                "splashChaos": URL_SPLASH.format(
-                    version, self.summoners[i + teamSize].championName
-                ),
-                "goldOrder": "{:,}".format(self.summoners[i].itemGold),
-                "goldChaos": "{:,}".format(self.summoners[i + teamSize].itemGold),
-                "goldDiff": "{:,}".format(
-                    self.summoners[i].itemGold - self.summoners[i + teamSize].itemGold
-                ),
-            }
+            if invertTeamColors:
+                row = {
+                    "position": self.summoners[i].position,
+                    "nameChaos": self.summoners[i].championName,
+                    "rankChaos": self.summoners[i].rank,
+                    "splashChaos": URL_SPLASH.format(
+                        version, self.summoners[i].championName
+                    ),
+                    "nameOrder": self.summoners[i + teamSize].championName,
+                    "rankOrder": self.summoners[i + teamSize].rank,
+                    "splashOrder": URL_SPLASH.format(
+                        version, self.summoners[i + teamSize].championName
+                    ),
+                    "goldChaos": "{:,}".format(self.summoners[i].itemGold),
+                    "goldOrder": "{:,}".format(self.summoners[i + teamSize].itemGold),
+                    "goldDiff": "{:,}".format(
+                        self.summoners[i + teamSize].itemGold
+                        - self.summoners[i].itemGold
+                    ),
+                }
+            else:
+                row = {
+                    "position": self.summoners[i].position,
+                    "nameOrder": self.summoners[i].championName,
+                    "rankOrder": self.summoners[i].rank,
+                    "splashOrder": URL_SPLASH.format(
+                        version, self.summoners[i].championName
+                    ),
+                    "nameChaos": self.summoners[i + teamSize].championName,
+                    "rankChaos": self.summoners[i + teamSize].rank,
+                    "splashChaos": URL_SPLASH.format(
+                        version, self.summoners[i + teamSize].championName
+                    ),
+                    "goldOrder": "{:,}".format(self.summoners[i].itemGold),
+                    "goldChaos": "{:,}".format(self.summoners[i + teamSize].itemGold),
+                    "goldDiff": "{:,}".format(
+                        self.summoners[i].itemGold
+                        - self.summoners[i + teamSize].itemGold
+                    ),
+                }
 
             if row["position"] == "":
                 row["position"] = "empty"
@@ -128,12 +158,20 @@ class Package:
             teamGold[1] += self.summoners[i + teamSize].itemGold
             dashboard.append(row)
 
-        teamGoldDiff = teamGold[0] - teamGold[1]
-        teamData = {
-            "order": "{:,}".format(teamGold[0]),
-            "chaos": "{:,}".format(teamGold[1]),
-            "diff": "{:,}".format(teamGoldDiff),
-        }
+        if invertTeamColors:
+            teamGoldDiff = teamGold[1] - teamGold[0]
+            teamData = {
+                "order": "{:,}".format(teamGold[1]),
+                "chaos": "{:,}".format(teamGold[0]),
+                "diff": "{:,}".format(teamGoldDiff),
+            }
+        else:
+            teamGoldDiff = teamGold[0] - teamGold[1]
+            teamData = {
+                "order": "{:,}".format(teamGold[0]),
+                "chaos": "{:,}".format(teamGold[1]),
+                "diff": "{:,}".format(teamGoldDiff),
+            }
 
         data.append(dashboard)
         data.append(teamData)
@@ -178,13 +216,13 @@ class Package:
 
 class Summoner:
     def __init__(
-            self,
-            championname: str,
-            team: str,
-            position: str,
-            rank=0,
-            itemGold=0,
-            summonerName="",
+        self,
+        championname: str,
+        team: str,
+        position: str,
+        rank=0,
+        itemGold=0,
+        summonerName="",
     ):
         self.championName: str = championname
         self.team: str = team
@@ -216,9 +254,13 @@ def getTeamGoldDiffImage() -> BytesIO:
     for y in range(-10000, 10000, 1000):
         if y < 0:
             color = "r"
+            if invertTeamColors:
+                color = "b"
             linewidth = 0.5
         elif y > 0:
             color = "b"
+            if invertTeamColors:
+                color = "r"
             linewidth = 0.5
         else:
             color = "k"
@@ -259,7 +301,7 @@ def index():
     global lastTime
 
     try:
-        if TESTENV:
+        if "-debug" in sys.argv[1:]:
             directory = os.path.abspath(os.path.dirname(sys.argv[0]))
             json = j.load(open(directory + "/allgamedata.json", "r"))
         else:
@@ -273,8 +315,13 @@ def index():
             lastDiff.append(teamGoldDiff)
             lastTime.append(p.gameTime)
 
+        teamColors = getTeamColors()
+
         return render_template(
-            "main.html", dashboardData=p.dashboard, teamData=p.teamGold
+            "main.html",
+            dashboardData=p.dashboard,
+            teamData=p.teamGold,
+            teamColors=teamColors,
         )
 
     except r.exceptions.ConnectionError:
@@ -290,12 +337,33 @@ def index():
         return render_template("loading.html")
 
 
+def getTeamColors():
+    if invertTeamColors:
+        teamColors = {
+            "left": "red",
+            "right": "blue",
+        }
+    else:
+        teamColors = {
+            "left": "blue",
+            "right": "red",
+        }
+
+    return teamColors
+
+
 @app.route("/teamGoldDiff.png")
 def diffImage():
     return send_file(getTeamGoldDiffImage(), mimetype="image/png")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        filename="/tmp/loldb.log",
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s: %(message)s",
+    )
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     errorcode = s.connect_ex(("8.8.8.8", 80))
     localIp = s.getsockname()[0]
@@ -306,7 +374,7 @@ if __name__ == "__main__":
         exit(1)
 
     print("League Dashboard booted...")
-    print(f"Open https://{localIp}:{PORT}/ in your browser.")
+    print(f"Open http://{HOST}:{PORT}/ in your browser.")
 
     try:
         version: str = r.get(url=URL_VERSION, verify=False).json()[0]
@@ -320,4 +388,4 @@ if __name__ == "__main__":
         print("Could not get champions. Exiting...")
         exit(1)
 
-    serve(app, host="0.0.0.0", port=PORT)
+    serve(app, host=HOST, port=PORT)
