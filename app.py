@@ -5,9 +5,11 @@ import socket
 import sys
 from io import BytesIO
 
+import jinja2
 import matplotlib
 import matplotlib.pyplot as plt
 import requests as r
+import urllib3
 from flask import Flask, render_template, send_file
 from waitress import serve
 
@@ -32,7 +34,6 @@ COLOR_FONT = CONFIG["COLOR_FONT"]
 COLOR_BACKGROUND = CONFIG["COLOR_BACKGROUND"]
 
 invertTeamColors = False
-
 
 app = Flask(__name__)
 r.packages.urllib3.disable_warnings()
@@ -79,8 +80,8 @@ class Package:
             # check if swap is needed
             global invertTeamColors
             invertTeamColors = (
-                self.json["activePlayer"]["summonerName"] == playerJson["summonerName"]
-                and playerJson["team"] == "CHAOS"
+                    self.json["activePlayer"]["summonerName"] == playerJson["summonerName"]
+                    and playerJson["team"] == "CHAOS"
             )
 
             try:
@@ -216,13 +217,13 @@ class Package:
 
 class Summoner:
     def __init__(
-        self,
-        championname: str,
-        team: str,
-        position: str,
-        rank=0,
-        itemGold=0,
-        summonerName="",
+            self,
+            championname: str,
+            team: str,
+            position: str,
+            rank=0,
+            itemGold=0,
+            summonerName="",
     ):
         self.championName: str = championname
         self.team: str = team
@@ -324,7 +325,7 @@ def index():
             teamColors=teamColors,
         )
 
-    except r.exceptions.ConnectionError:
+    except r.exceptions.ConnectionError or ConnectionRefusedError or urllib3.exceptions.NewConnectionError or urllib3.exceptions.MaxRetryError or jinja2.exceptions.UndefinedError:
         if p is not None:
             return render_template(
                 "main.html", dashboardData=p.dashboard, teamData=p.teamGold
@@ -339,17 +340,14 @@ def index():
 
 def getTeamColors():
     if invertTeamColors:
-        teamColors = {
+        return {
             "left": "red",
             "right": "blue",
         }
-    else:
-        teamColors = {
-            "left": "blue",
-            "right": "red",
-        }
-
-    return teamColors
+    return {
+        "left": "blue",
+        "right": "red",
+    }
 
 
 @app.route("/teamGoldDiff.png")
@@ -359,8 +357,8 @@ def diffImage():
 
 if __name__ == "__main__":
     logging.basicConfig(
-        filename="/tmp/loldb.log",
-        level=logging.INFO,
+        filename="loldb.log",
+        level=logging.DEBUG,
         format="%(asctime)s %(levelname)s: %(message)s",
     )
 
@@ -372,9 +370,6 @@ if __name__ == "__main__":
     if errorcode != 0:
         print("Could not start webserver")
         exit(1)
-
-    print("League Dashboard booted...")
-    print(f"Open http://{HOST}:{PORT}/ in your browser.")
 
     try:
         version: str = r.get(url=URL_VERSION, verify=False).json()[0]
@@ -389,3 +384,6 @@ if __name__ == "__main__":
         exit(1)
 
     serve(app, host=HOST, port=PORT)
+
+    print("League Dashboard booted...")
+    print(f"Open http://{HOST}:{PORT}/ in your browser.")
