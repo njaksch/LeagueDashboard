@@ -1,16 +1,13 @@
 import json as j
 import logging
 import os
-import socket
 import sys
 from io import BytesIO
 
-import jinja2
-import matplotlib
 import matplotlib.pyplot as plt
 import requests as r
-import urllib3
 from flask import Flask, render_template, send_file
+from jinja2.exceptions import UndefinedError
 from waitress import serve
 
 # Server
@@ -37,7 +34,19 @@ invertTeamColors = False
 
 app = Flask(__name__)
 r.packages.urllib3.disable_warnings()
-matplotlib.use("Agg")
+
+logging.basicConfig(
+    filename="loldb.log",
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s",
+)
+
+try:
+    version: str = r.get(url=URL_VERSION, verify=False).json()[0]
+    champions = r.get(url=URL_CHAMPIONS.format(version), verify=False).json()
+except:
+    print("Could not reach riot api. Exiting...")
+    exit(1)
 
 
 def championNameToId(name: str) -> str:
@@ -233,12 +242,67 @@ class Summoner:
         self.rank: int = rank
 
 
-class Dashboard:
-    def __init__(self, summoners: list[Summoner]):
-        self.summoners = summoners
+p = None
+lastDiff: list[int] = [0]
+lastTime: list[float] = [0.0]
 
 
-def getTeamGoldDiffImage() -> BytesIO:
+@app.route("/")
+def index():
+    def getTeamColors():
+        if invertTeamColors:
+            return {
+                "left": "red",
+                "right": "blue",
+            }
+        return {
+            "left": "blue",
+            "right": "red",
+        }
+
+    global p
+    global lastDiff
+    global lastTime
+
+    try:
+        if "-debug" in sys.argv[1:]:
+            print(os.getcwd())
+            json = j.load(open("/mnt/wdc/Projects/Python/LeagueDashboard/allgamedata.json", "r"))
+        else:
+            json = r.get(url=URL_LIVEGAME, verify=False).json()
+
+        p = Package(json)
+
+        teamGoldDiff = int((p.teamGold["diff"].replace(",", "")))
+
+        if lastDiff[-1] != teamGoldDiff:
+            lastDiff.append(teamGoldDiff)
+            lastTime.append(p.gameTime)
+
+        teamColors = getTeamColors()
+
+        return render_template(
+            "main.html",
+            dashboardData=p.dashboard,
+            teamData=p.teamGold,
+            teamColors=teamColors,
+        )
+
+    except r.exceptions.ConnectionError or UndefinedError:
+        if "-debug" in sys.argv[1:]:
+            return render_template(
+                "main.html", dashboardData=p.dashboard, teamData=p.teamGold
+            )
+        return render_template("error.html")
+
+    except KeyError:
+        lastDiff = [0]
+        lastTime = [0]
+        return render_template("loading.html")
+
+
+@app.route("/teamGoldDiff.png")
+def diffImage():
     plt.clf()
     fig = plt.figure(facecolor=COLOR_BACKGROUND)
     axes = plt.axes()
@@ -287,103 +351,16 @@ def getTeamGoldDiffImage() -> BytesIO:
     img.seek(0)
     plt.close(fig)
 
-    return img
-
-
-p = None
-lastDiff: list[int] = [0]
-lastTime: list[float] = [0.0]
-
-
-@app.route("/")
-def index():
-    global p
-    global lastDiff
-    global lastTime
-
-    try:
-        if "-debug" in sys.argv[1:]:
-            directory = os.path.abspath(os.path.dirname(sys.argv[0]))
-            json = j.load(open(directory + "/allgamedata.json", "r"))
-        else:
-            json = r.get(url=URL_LIVEGAME, verify=False).json()
-
-        p = Package(json)
-
-        teamGoldDiff = int((p.teamGold["diff"].replace(",", "")))
-
-        if lastDiff[-1] != teamGoldDiff:
-            lastDiff.append(teamGoldDiff)
-            lastTime.append(p.gameTime)
-
-        teamColors = getTeamColors()
-
-        return render_template(
-            "main.html",
-            dashboardData=p.dashboard,
-            teamData=p.teamGold,
-            teamColors=teamColors,
-        )
-
-    except r.exceptions.ConnectionError or ConnectionRefusedError or urllib3.exceptions.NewConnectionError or urllib3.exceptions.MaxRetryError or jinja2.exceptions.UndefinedError:
-        if p is not None:
-            return render_template(
-                "main.html", dashboardData=p.dashboard, teamData=p.teamGold
-            )
-        return render_template("error.html")
-
-    except KeyError:
-        lastDiff = [0]
-        lastTime = [0]
-        return render_template("loading.html")
-
-
-def getTeamColors():
-    if invertTeamColors:
-        return {
-            "left": "red",
-            "right": "blue",
-        }
-    return {
-        "left": "blue",
-        "right": "red",
-    }
-
-
-@app.route("/teamGoldDiff.png")
-def diffImage():
-    return send_file(getTeamGoldDiffImage(), mimetype="image/png")
+    return send_file(img, mimetype="image/png")
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        filename="loldb.log",
-        level=logging.DEBUG,
-        format="%(asctime)s %(levelname)s: %(message)s",
-    )
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    errorcode = s.connect_ex(("8.8.8.8", 80))
-    localIp = s.getsockname()[0]
-    s.close()
-
-    if errorcode != 0:
-        print("Could not start webserver")
-        exit(1)
-
     try:
-        version: str = r.get(url=URL_VERSION, verify=False).json()[0]
-    except:
-        print("Could not get version. Exiting...")
-        exit(1)
+        serve(app, host=HOST, port=PORT)
+    except OSError as e:
+        if e.errno == 98:
+            print(f"The port {PORT} on {HOST} is already in use. Exiting...")
+            exit(1)
 
-    try:
-        champions = r.get(url=URL_CHAMPIONS.format(version), verify=False).json()
-    except:
-        print("Could not get champions. Exiting...")
-        exit(1)
-
-    serve(app, host=HOST, port=PORT)
-
-    print("League Dashboard booted...")
-    print(f"Open http://{HOST}:{PORT}/ in your browser.")
+print("League Dashboard booted...")
+print(f"Open http://{HOST}:{PORT}/ in your browser.")
