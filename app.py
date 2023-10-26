@@ -266,8 +266,7 @@ def index():
 
     try:
         if "-debug" in sys.argv[1:]:
-            print(os.getcwd())
-            json = j.load(open("/mnt/wdc/Projects/Python/LeagueDashboard/allgamedata.json", "r"))
+            json = j.load(open(os.getcwd() + "/allgamedata.json", "r"))
         else:
             json = r.get(url=URL_LIVEGAME, verify=False).json()
 
