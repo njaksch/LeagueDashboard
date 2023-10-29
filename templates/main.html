@@ -3,29 +3,31 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="refresh" content="5">
     <title>League Dashboard</title>
     <link rel="stylesheet" href="static/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link rel="shortcut icon" href="static/favicon.ico" type="image/x-icon">
     <link rel="icon" href="static/favicon.ico" type="image/x-icon">
 </head>
 <body>
 <div id="dashboard">
-    <h2>Dashboard</h2>
-    <table>
+    <h1 class="text-start p-4 h1 fw-bold">Dashboard</h1>
+    <table class="table">
         {% for row in dashboardData %}
             <tr>
                 <td><img class="img_dash" src="static/images/lanes/{{ row['position'] }}.webp"
                          alt="{{ row['position'] }}"/></td>
-                <td class="rank">{{ row['rankOrder'] }}</td>
+                <td class="rank"><p class="fs-3">{{ row['rankOrder'] }}</p></td>
                 <td><img class="img_dash" src="{{ row['splashOrder'] }}"
                          alt="{{ row['nameOrder'] }}"/></td>
-                <td class="gold">{{ row['goldOrder'] }}</td>
-                <td class="gold">{{ row['goldDiff'] }}</td>
-                <td class="gold">{{ row['goldChaos'] }}</td>
+                <td class="gold"><p class="fs-3">{{ row['goldOrder'] }}</p></td>
+                <td class="gold"><p class="fs-3">{{ row['goldDiff'] }}</p></td>
+                <td class="gold"><p class="fs-3">{{ row['goldChaos'] }}</p></td>
                 <td><img class="img_dash" src="{{ row['splashChaos'] }}"
                          alt="{{ row['nameChaos'] }}"/></td>
-                <td class="rank">{{ row['rankChaos'] }}</td>
+                <td class="rank"><p class="fs-3">{{ row['rankChaos'] }}</p></td>
                 <td><img class="img_dash" src="static/images/lanes/{{ row['position'] }}.webp"
                          alt="{{ row['position'] }}"/></td>
             </tr>
@@ -34,17 +36,18 @@
             <td style="background-color:{{ teamColors['left'] }}"></td>
             <td style="background-color:{{ teamColors['left'] }}"></td>
             <td style="background-color:{{ teamColors['left'] }}"></td>
-            <td class="gold">{{ teamData['order'] }}</td>
-            <td class="gold">{{ teamData['diff'] }}</td>
-            <td class="gold">{{ teamData['chaos'] }}</td>
+            <td class="gold"><p class="fs-3">{{ teamData['order'] }}</p></td>
+            <td class="gold"><p class="fs-3">{{ teamData['diff'] }}</p></td>
+            <td class="gold"><p class="fs-3">{{ teamData['chaos'] }}</p></td>
             <td style="background-color:{{ teamColors['right'] }}"></td>
             <td style="background-color:{{ teamColors['right'] }}"></td>
             <td style="background-color:{{ teamColors['right'] }}"></td>
         </tr>
     </table>
 </div>
-<div id="mostgold">
+<div id="teamgold">
     <img id="goldDiff" src="{{ url_for('diffImage') }}" alt="Gold Difference">
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 body {
     background-color: #1e1e1e;
+    width: 95%;
+    height: 100%;
 }
 
 p, td, h2 {
@@ -27,4 +29,14 @@ div {
 
 #goldDiff {
     width: 100%;
+}
+
+#dashboard {
+    margin-left: 1%;
+    width: 40%;
+}
+
+#teamgold {
+    margin-left: 1%;
+    width: 58%;
 }
