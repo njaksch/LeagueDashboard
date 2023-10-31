@@ -198,7 +198,7 @@ class Package:
                     team = TEAMS[teamID]
                     position = POSITIONS[positionID]
 
-                    if summoner.team == team and summoner.position == position:
+                    if summoner.team.upper() == team and summoner.position == position:
                         summonersSorted.append(summoner)
                         break
 
