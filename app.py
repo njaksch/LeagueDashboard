@@ -30,8 +30,6 @@ PORT = CONFIG["PORT"]
 COLOR_FONT = CONFIG["COLOR_FONT"]
 COLOR_BACKGROUND = CONFIG["COLOR_BACKGROUND"]
 
-invertTeamColors = False
-
 app = Flask(__name__)
 r.packages.urllib3.disable_warnings()
 
@@ -44,7 +42,7 @@ logging.basicConfig(
 try:
     version: str = r.get(url=URL_VERSION, verify=False).json()[0]
     champions = r.get(url=URL_CHAMPIONS.format(version), verify=False).json()
-except:
+except r.exceptions:
     print("Could not reach riot api. Exiting...")
     exit(1)
 
@@ -87,11 +85,12 @@ class Package:
             goldlist.append(gold)
 
             # check if swap is needed
-            global invertTeamColors
-            invertTeamColors = (
-                    self.json["activePlayer"]["summonerName"] == playerJson["summonerName"]
-                    and playerJson["team"] == "CHAOS"
-            )
+            if self.json["activePlayer"]["summonerName"] == playerJson["summonerName"]:
+                global TEAMS
+                if playerJson["team"] == "ORDER":
+                    TEAMS = ["ORDER", "CHAOS"]
+                else:
+                    TEAMS = ["CHAOS", "ORDER"]
 
             try:
                 summoners[playerID].itemGold = gold
@@ -120,46 +119,25 @@ class Package:
         teamSize = int(len(self.summoners) / 2)
 
         for i in range(teamSize):
-            if invertTeamColors:
-                row = {
-                    "position": self.summoners[i].position,
-                    "nameChaos": self.summoners[i].championName,
-                    "rankChaos": self.summoners[i].rank,
-                    "splashChaos": URL_SPLASH.format(
-                        version, self.summoners[i].championName
-                    ),
-                    "nameOrder": self.summoners[i + teamSize].championName,
-                    "rankOrder": self.summoners[i + teamSize].rank,
-                    "splashOrder": URL_SPLASH.format(
-                        version, self.summoners[i + teamSize].championName
-                    ),
-                    "goldChaos": "{:,}".format(self.summoners[i].itemGold),
-                    "goldOrder": "{:,}".format(self.summoners[i + teamSize].itemGold),
-                    "goldDiff": "{:,}".format(
-                        self.summoners[i + teamSize].itemGold
-                        - self.summoners[i].itemGold
-                    ),
-                }
-            else:
-                row = {
-                    "position": self.summoners[i].position,
-                    "nameOrder": self.summoners[i].championName,
-                    "rankOrder": self.summoners[i].rank,
-                    "splashOrder": URL_SPLASH.format(
-                        version, self.summoners[i].championName
-                    ),
-                    "nameChaos": self.summoners[i + teamSize].championName,
-                    "rankChaos": self.summoners[i + teamSize].rank,
-                    "splashChaos": URL_SPLASH.format(
-                        version, self.summoners[i + teamSize].championName
-                    ),
-                    "goldOrder": "{:,}".format(self.summoners[i].itemGold),
-                    "goldChaos": "{:,}".format(self.summoners[i + teamSize].itemGold),
-                    "goldDiff": "{:,}".format(
-                        self.summoners[i].itemGold
-                        - self.summoners[i + teamSize].itemGold
-                    ),
-                }
+            row = {
+                "position": self.summoners[i].position,
+                "nameChaos": self.summoners[i].championName,
+                "rankChaos": self.summoners[i].rank,
+                "splashChaos": URL_SPLASH.format(
+                    version, self.summoners[i].championName
+                ),
+                "nameOrder": self.summoners[i + teamSize].championName,
+                "rankOrder": self.summoners[i + teamSize].rank,
+                "splashOrder": URL_SPLASH.format(
+                    version, self.summoners[i + teamSize].championName
+                ),
+                "goldChaos": "{:,}".format(self.summoners[i].itemGold),
+                "goldOrder": "{:,}".format(self.summoners[i + teamSize].itemGold),
+                "goldDiff": "{:,}".format(
+                    self.summoners[i + teamSize].itemGold
+                    - self.summoners[i].itemGold
+                ),
+            }
 
             if row["position"] == "":
                 row["position"] = "empty"
@@ -168,20 +146,12 @@ class Package:
             teamGold[1] += self.summoners[i + teamSize].itemGold
             dashboard.append(row)
 
-        if invertTeamColors:
-            teamGoldDiff = teamGold[1] - teamGold[0]
-            teamData = {
-                "order": "{:,}".format(teamGold[1]),
-                "chaos": "{:,}".format(teamGold[0]),
-                "diff": "{:,}".format(teamGoldDiff),
-            }
-        else:
-            teamGoldDiff = teamGold[0] - teamGold[1]
-            teamData = {
-                "order": "{:,}".format(teamGold[0]),
-                "chaos": "{:,}".format(teamGold[1]),
-                "diff": "{:,}".format(teamGoldDiff),
-            }
+        teamGoldDiff = teamGold[1] - teamGold[0]
+        teamData = {
+            "order": "{:,}".format(teamGold[1]),
+            "chaos": "{:,}".format(teamGold[0]),
+            "diff": "{:,}".format(teamGoldDiff),
+        }
 
         data.append(dashboard)
         data.append(teamData)
@@ -247,10 +217,14 @@ lastDiff: list[int] = [0]
 lastTime: list[float] = [0.0]
 
 
+def isInverted() -> bool:
+    return TEAMS[0] == "CHAOS"
+
+
 @app.route("/")
 def index():
     def getTeamColors():
-        if invertTeamColors:
+        if isInverted():
             return {
                 "left": "red",
                 "right": "blue",
@@ -318,12 +292,12 @@ def diffImage():
     for y in range(-10000, 10000, 1000):
         if y < 0:
             color = "r"
-            if invertTeamColors:
+            if isInverted():
                 color = "b"
             linewidth = 0.5
         elif y > 0:
             color = "b"
-            if invertTeamColors:
+            if isInverted():
                 color = "r"
             linewidth = 0.5
         else:
