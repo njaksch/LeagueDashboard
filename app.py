@@ -28,8 +28,8 @@ POSITIONS = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 # Config
 CONFIG = j.load(open("config.json", "r"))
 PORT = CONFIG["PORT"]
-COLOR_FONT = CONFIG["COLOR_FONT"]
-COLOR_BACKGROUND = CONFIG["COLOR_BACKGROUND"]
+COLOR_FONT = CONFIG["DIAGRAMM_FONT"]
+COLOR_BACKGROUND = CONFIG["DIAGRAMM_BACKGROUND"]
 
 app = Flask(__name__)
 # noinspection PyUnresolvedReferences

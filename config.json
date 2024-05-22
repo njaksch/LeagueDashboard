@@ -1,5 +1,5 @@
 {
-    "PORT": 5000,
-    "COLOR_FONT": "#CECECE",
-    "COLOR_BACKGROUND": "#1E1E1E"
+    "DIAGRAMM_BACKGROUND": "#1E1E1E",
+    "DIAGRAMM_FONT": "#CECECE",
+    "PORT": 5000
 }
