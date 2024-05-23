@@ -334,8 +334,8 @@ def get_local_ip():
             s.connect(("8.8.8.8", 80))
             local_ip = s.getsockname()[0]
         return local_ip
-    except Exception as e:
-        return f"Fehler beim Ermitteln der lokalen IP-Adresse: {e}"
+    except Exception as ex:
+        return f"Error retrieving local ip address: {ex}"
 
 
 def get_external_ip():
@@ -345,8 +345,8 @@ def get_external_ip():
         ip_info = response.json()
         external_ip = ip_info["ip"]
         return external_ip
-    except requests.RequestException as e:
-        return f"Fehler beim Ermitteln der externen IP-Adresse: {e}"
+    except requests.RequestException as ex:
+        return f"Error retrieving external ip address: {ex}"
 
 
 if __name__ == "__main__":
