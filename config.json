@@ -1,5 +1,5 @@
 {
-    "DIAGRAMM_BACKGROUND": "#1E1E1E",
-    "DIAGRAMM_FONT": "#CECECE",
+    "DIAGRAMM_BACKGROUND": "#212529",
+    "DIAGRAMM_FONT": "#dee2e6",
     "PORT": 5000
 }
