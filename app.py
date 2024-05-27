@@ -266,7 +266,15 @@ def index():
                 teamData=p.data.teamData,
                 teamColors=getTeamColors(),
             )
-        return render_template("error.html")
+        if len(lastTime) <= 1:
+            return render_template("error.html")
+        else:
+            return render_template(
+                "main.html",
+                dashboardData=p.data.dashboard,
+                teamData=p.data.teamData,
+                teamColors=getTeamColors(),
+            )
 
     except KeyError:
         lastDiff = [0]
