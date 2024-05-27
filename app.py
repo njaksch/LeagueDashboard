@@ -5,6 +5,7 @@ import socket
 import sys
 from io import BytesIO
 
+import matplotlib
 import matplotlib.pyplot as plt
 import requests
 from flask import Flask, render_template, send_file
@@ -32,7 +33,7 @@ COLOR_FONT = CONFIG["DIAGRAMM_FONT"]
 COLOR_BACKGROUND = CONFIG["DIAGRAMM_BACKGROUND"]
 
 app = Flask(__name__)
-# noinspection PyUnresolvedReferences
+matplotlib.use("agg")
 requests.packages.urllib3.disable_warnings()
 
 logging.basicConfig(
